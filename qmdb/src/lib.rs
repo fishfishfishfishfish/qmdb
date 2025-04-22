@@ -171,7 +171,8 @@ impl AdsCore {
             )));
         }
 
-        let max_kept_height = 10; //1000;
+        // let max_kept_height = 10; //1000;
+        let max_kept_height = 40; //1000;
         let flusher = Flusher::new(
             shards,
             meta.clone(),

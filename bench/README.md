@@ -54,8 +54,18 @@ These argments control the workload and can be adjusted accordingly or left as t
 - **`tps_blocks`**: When benchmarking transactions per second (TPS), this sets the number of blocks to run. Default is 50 in release mode.
 - **`changesets_per_task`**: Number of changesets per task. Each changeset corresponds to a transaction. Default is 2.
 
+
+The total entries is divided into (from big to small) blocks->tasks->changesets->operations
+The entries is loaded block by block
+every `hover_write_block` blocks, the benchmark run hover tasks: insert, delete, update, read to evaluate the throughput
+
+
 ## Troubleshooting
 
 - Ensure `ulimit` is set high enough to handle file descriptors.
 - Verify the SSD is correctly mounted at `/mnt/nvme`.
 - Ensure the `randsrc.dat` file is present
+
+
+
+#

@@ -12,6 +12,8 @@ const PRIME2: u64 = 888869;
 
 #[derive(Debug, Clone)]
 pub struct TestGenV2 {
+    pub key_size:  usize,
+    pub val_size:  usize,
     pub wr_op_in_cset: usize,
     pub rd_op_in_cset: usize,
     pub delete_op_in_cset: usize,
@@ -25,7 +27,7 @@ pub struct TestGenV2 {
     pub cur_num: u64,
     pub cur_round: usize,
     block_count: u64,
-    pub sp: ShuffleParam,
+    pub sp: ShuffleParam,   
 }
 
 // TODO: Refactor this to avoid using different rounds for populating the database and benchmarking TPS
@@ -44,6 +46,8 @@ impl TestGenV2 {
         sp.rotate_bits = randsrc.get_uint32() as usize % sp.total_bits;
 
         Self {
+            key_size: 32,
+            val_size: 1024,
             // Composition of changeset based on historical Ethereum
             wr_op_in_cset: 9,
             rd_op_in_cset: 15,
@@ -95,8 +99,8 @@ impl TestGenV2 {
 
     pub fn gen_block(&mut self) -> Vec<RwLock<Option<SimpleTask>>> {
         let blk_in_round = self.block_in_round();
-        // if self.block_count != 0 && self.block_count % blk_in_round == 0 {
-        if self.block_count == blk_in_round {
+        if self.block_count != 0 && self.block_count % blk_in_round == 0 {
+        // if self.block_count == blk_in_round{
             // First round is to populate the database, second round is to benchmark TPS.
             // Code does not currently support more than 2 rounds. TODO: Refactor this.
             // println!(
@@ -114,10 +118,11 @@ impl TestGenV2 {
         for _ in 0..self.task_in_block {
             res.push(RwLock::new(None));
         }
-
-        let task_group_size = self.task_in_block / 8;
+        
+        let n_thread = 1;
+        let task_group_size = self.task_in_block / n_thread;
         std::thread::scope(|s| {
-            for i in 0..8 {
+            for i in 0..n_thread {
                 let mut tgen = self.clone();
                 self.skip_tasks(task_group_size as u64);
                 let start = i * task_group_size;
@@ -158,24 +163,28 @@ impl TestGenV2 {
     }
 
     pub fn fill_kv(&self, num: u64, k: &mut [u8], v: &mut [u8]) -> [u8; 32] {
-        BigEndian::write_u64(&mut k[12..20], num);
-        let hash = hasher::hash(&k[12..20]);
-        k[20..20 + 32].copy_from_slice(&hash[..]);
-        for i in 0..12 {
-            // fill zero bytes with pseudo-random values
-            k[i] = k[20 + i] ^ k[32 + i];
-        }
+        BigEndian::write_u32(&mut k[28..32], num as u32);
+        let hash = hasher::hash(&k[28..32]);
+        k[0..28].copy_from_slice(&hash[0..28]);
+        // for i in 0..12 {
+        //     // fill zero bytes with pseudo-random values
+        //     k[i] = k[20 + i] ^ k[32 + i];
+        // }
         let kh = hasher::hash(&k[..]);
-
-        BigEndian::write_u32(&mut v[..4], self.cur_round as u32);
-        v[4..].copy_from_slice(&kh[4..]);
+            
+        // BigEndian::write_u32(&mut v[..4], self.cur_round as u32);
+        // v[0..].copy_from_slice(&kh[4..]);
         kh
     }
 
     fn gen_cset(&mut self) -> ChangeSet {
         let mut cset = ChangeSet::new();
-        let mut k = [0u8; 32 + 20];
-        let mut v = [0u8; 32];
+        let mut k = [0u8; 32];
+        // let mut k = [0u8; 32 + 20];
+        let mut v = [0u8; 1024];
+        for i in 0..1024 {
+            v[i] = 0;
+        }
         let mut op_type = OP_WRITE;
         if self.cur_round == 0 {
             op_type = OP_CREATE;
@@ -192,7 +201,8 @@ impl TestGenV2 {
             let kh = self.fill_kv(num, &mut k[..], &mut v[..]);
             let shard_id = byte0_to_shard_id(kh[0]) as u8;
             //let k64 = BigEndian::read_u64(&kh[0..8]);
-            //println!("AA blkcnt={:#04x} r={:#04x} op={} cur_num={:#08x} num={:#08x} k64={:#016x} k={:?} kh={:?}", self.block_count, self.cur_round, op_type, self.cur_num, num, k64, k, kh);
+            // println!("AA blkcnt={:#04x} r={:#04x} op={} cur_num={:#08x} num={:#08x} k64={:#016x} k={:?} kh={:?}", self.block_count, self.cur_round, op_type, self.cur_num, num, k64, k, kh);
+            // println!("AA blkcnt={} r={} op={} cur_num={} num={}, shard_id={}", self.block_count, self.cur_round, op_type, self.cur_num, num, shard_id);
             self.cur_num += 1;
 
             cset.add_op(op_type, shard_id, &kh, &k[..], &v[..], None);

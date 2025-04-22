@@ -54,3 +54,36 @@ pub struct HoverWorkloadArgs {
     #[arg(long, default_value_t = 100000)]
     pub num_read_latency_samples: u64,
 }
+
+
+
+#[derive(Parser, Serialize, Debug, Clone)]
+pub struct UpdateMetasCli {
+    /// Number of entries to populate database with
+    #[arg(short, long, default_value_t = 500)]
+    pub entry_count: u64,
+
+    /// Directory to store the database's persistent files (e.g., /mnt/nvme/QMDB)
+    #[arg(long, default_value = "/tmp/QMDB")]
+    pub db_dir: String,
+
+    /// Source of randomness for workload generation  
+    #[arg(short, long, default_value = "./randsrc.dat")]
+    pub randsrc_filename: String,
+
+    /// Output file for benchmark results
+    #[arg(short, long, default_value = "results.csv")]
+    pub output_filename: String,
+
+    /// Number of changesets per task/transaction
+    #[arg(long, default_value_t = 1, alias = "changesets-per-txn")]
+    pub changesets_per_task: u64,
+
+    /// Target number of operations per block. Will be rounded to nearest achievable number based on changesets-per-task and used to calculate transactions (tasks) per block.
+    #[arg(long, default_value_t = 500)]
+    pub ops_per_block: u64,
+
+    /// Number of blocks to run updates
+    #[arg(long, default_value_t = if cfg!(debug_assertions) { 10 } else { 50 })]
+    pub tps_blocks: u64,
+}
