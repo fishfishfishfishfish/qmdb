@@ -33,6 +33,8 @@ procfs = { version = "0.17", features = ["serde1", "chrono"] }
 name = "speed"
 [[bin]]
 name = "update_metas"
+[[bin]]
+name = "micro_benchmark"
 
 [features]
 default = []

@@ -24,6 +24,7 @@ Cargo.lock
 *.log
 
 data/
+micro_benchmark_results/
 
 /qmdb/DataTree
 /TestGenV1

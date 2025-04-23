@@ -111,7 +111,7 @@ impl EntryFlusher {
         Self {
             shards,
             meta,
-            max_kept_height: 1000,
+            max_kept_height: 40 //1000,
         }
     }
 

@@ -179,12 +179,8 @@ impl TestGenV2 {
 
     fn gen_cset(&mut self) -> ChangeSet {
         let mut cset = ChangeSet::new();
-        let mut k = [0u8; 32];
-        // let mut k = [0u8; 32 + 20];
-        let mut v = [0u8; 1024];
-        for i in 0..1024 {
-            v[i] = 0;
-        }
+        let mut k = vec![0u8; self.key_size];
+        let mut v = vec![0u8; self.val_size];
         let mut op_type = OP_WRITE;
         if self.cur_round == 0 {
             op_type = OP_CREATE;
