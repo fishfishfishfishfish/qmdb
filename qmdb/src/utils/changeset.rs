@@ -247,6 +247,14 @@ impl ChangeSet {
             );
         }
     }
+
+    pub fn get_key_list(&self) -> Vec<Vec<u8>> {
+        let mut key_list: Vec<Vec<u8>> = Vec::with_capacity(self.op_list.len());
+        for op in &self.op_list {
+            key_list.push(self.data[op.key_start as usize..op.value_start as usize].to_vec());
+        }
+        key_list
+    }
 }
 
 #[cfg(test)]

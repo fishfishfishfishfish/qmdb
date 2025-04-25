@@ -521,9 +521,9 @@ fn measure_read_latency(
     print!("Benchmarking read latency...");
     let latency = results.latencies.get_mut("reads").unwrap();
     for _ in 0..num_read_latency_samples {
-        let k = generate_read_key(randsrc, max_num);
+        let k = generate_read_key(randsrc, max_num).to_vec();
         let start = Instant::now();
-        db_backend::read_kv(table_id, &vec![k]);
+        db_backend::read_kv(table_id, -1, &vec![k]);
         let duration = start.elapsed();
         latency.record(duration);
     }

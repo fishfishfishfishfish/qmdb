@@ -1,3 +1,4 @@
+use std::iter;
 use std::panic;
 // use std::thread;
 use std::collections::HashMap;
@@ -19,6 +20,7 @@ use qmdb::def::OP_DELETE;
 use qmdb::def::OP_READ;
 use qmdb::def::OP_WRITE;
 use qmdb::indexer::hybrid::index_cache::COUNTERS;
+use qmdb::tasks::Task;
 use qmdb::test_helper::RandSrc;
 use qmdb::test_helper::SimpleTask;
 use qmdb::utils::{byte0_to_shard_id, changeset::ChangeSet, hasher};
@@ -36,6 +38,11 @@ const PRIME1: u64 = 1299827; // Used for stride for hover_recreate_block
 const N_TABLES: usize = 1;
 
 fn main() {
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(1)
+        .build_global()
+        .unwrap();
+
     let args: MicroBenchCli = MicroBenchCli::parse();
     // let mut results = BenchmarkResults::new(&args);
 
@@ -184,6 +191,7 @@ fn run(
         }
     }
 
+    db_backend::flush(table_id);
     let _ = wtr.flush();
     println!(
         "Block population complete. Writing partial results to file: {}",
@@ -219,28 +227,48 @@ fn run(
         // task_count is the number of transactions
         let task_list = test_gen.gen_block();
         let task_count = task_list.len();
-        let tps_start = Instant::now();
+        let mut key_list: Vec<Vec<u8>> = Vec::new();
+        for (_ti, task) in task_list.iter().enumerate() {
+            let task_read = task.read();
+            if let Some(simple_task) = task_read.as_ref() {
+                for (_ci, change_set) in simple_task.change_sets.iter().enumerate() {
+                    key_list.extend_from_slice(&change_set.get_key_list()[..]);
+                }
+            }
+        }
+        let key_count = key_list.len();
+        for key in key_list.iter() {
+            println!("key: {:?}", key);
+        }
+
+        let put_start = Instant::now();
         db_backend::update_kv(table_id, height, task_list);
-        let latency = tps_start.elapsed().as_nanos();
-        let throughput = (task_count as f64 / latency as f64) * 1e9;
+        db_backend::flush(table_id);
+        let put_latency = put_start.elapsed().as_nanos();
+        let put_throughput = (key_count as f64 / put_latency as f64) * 1e9;
+
+        let get_start = Instant::now();
+        db_backend::read_kv(table_id, height, &key_list);
+        let get_latency = get_start.elapsed().as_nanos();
+        let get_throughput = (key_count as f64 / get_latency as f64) * 1e9;
 
         // logging
-        if height % 2 == 1 {
-            tps_result.push(height.to_string());
-        }
-        tps_result.push(latency.to_string());
-        tps_result.push(throughput.to_string());
-        if height % 2 == 0 {
-            tps_wtr.write_record(&tps_result)?;
-            tps_result.clear();
-        }
+        tps_result.push(height.to_string());
+        tps_result.push(put_latency.to_string());
+        tps_result.push(put_throughput.to_string());
+        tps_result.push(get_latency.to_string());
+        tps_result.push(get_throughput.to_string());
+        tps_wtr.write_record(&tps_result)?;
+        tps_result.clear();
         println!(
-            "TPS block {} type {}, task count: {}, latency: {}ns, throughput: {:.2?}",
+            "TPS block {} type {}, task count: {}, latency: {}ns/{}ns, throughput: {:.2?}/{:.2?}",
             b,
             test_gen.block_type(),
             task_count,
-            latency,
-            throughput
+            put_latency,
+            get_latency,
+            put_throughput,
+            get_throughput
         );
         height += 1;
     }

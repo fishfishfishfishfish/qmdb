@@ -2,9 +2,9 @@
 export PATH=$PATH:/home/${USER}/.cargo/bin
 cargo build --release
 
-entries_counts=(5000)
+entries_counts=(80)
 tps_blocks=20
-ops_per_block=100 # batch size
+ops_per_block=20 # batch size
 key_size=32
 value_size=1024
 

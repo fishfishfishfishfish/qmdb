@@ -69,17 +69,24 @@ pub fn return_ads(tid: usize, ads: AdsWrap<SimpleTask>) {
 }
 
 //let shared_ads = &ads.get_shared();
-pub fn read_kv(shared_ads: &SharedAdsWrap, key_list: &Vec<[u8; 52]>) {
+// pub fn read_kv(shared_ads: &SharedAdsWrap, key_list: &Vec<[u8; 52]>) {
+pub fn read_kv(tid: usize, height: i64, key_list: &Vec<Vec<u8>>) {
+    let ads = unsafe { ADS[tid].take().unwrap() };
+    let shared_ads = ads.get_shared();
     rayon::scope(|s| {
         s.spawn(move |_| {
             let mut buf = [0; DEFAULT_ENTRY_SIZE];
             for k in key_list.iter() {
                 let kh = hasher::hash(&k[..]);
-                let (_, ok) = shared_ads.read_entry(-1, &kh[..], &[], &mut buf);
+                println!("AA read k={:?}, kh={:?} ", k, kh);
+                let (_, ok) = shared_ads.read_entry(height, &kh[..], &k[..], &mut buf);
                 if !ok {
-                    panic!("Cannot read entry kh={:?} ", kh);
+                    panic!("Cannot read entry k={:?}, kh={:?} ", k, kh);
                 }
             }
         });
     });
+    unsafe {
+        ADS[tid] = Some(ads);
+    }
 }

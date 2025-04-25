@@ -155,9 +155,11 @@ impl Prefetcher {
             let indexer = self.indexer.clone();
             let change_sets = change_sets.clone();
             self.tpool.execute(move || {
+                // println!("before, changeset:{:?}", change_sets[i].print());
                 change_sets[i].run_all(|op, kh: &[u8; 32], _k, _v, _r| {
                     let shard_id = byte0_to_shard_id(kh[0]);
-                    indexer.for_each(height, op, &kh[..], |_k, offset| -> bool {
+                    indexer.for_each(height, op, &kh[..], |k, offset| -> bool {
+                        println!("prefetcher: fetching {:?}", k);
                         let ubuf = &update_buffers[shard_id];
                         let ef = &entry_files[shard_id];
                         fetch_entry_to_cache(ubuf, ef, &cache, shard_id, offset);
@@ -168,7 +170,9 @@ impl Prefetcher {
                         done_chans[shard_id].send((task_id, next_task_id)).unwrap();
                     }
                 });
+                // println!("after, changeset:{:?}", change_sets[i].print());
             });
         }
+        self.tpool.join();
     }
 }

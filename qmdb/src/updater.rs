@@ -264,6 +264,7 @@ impl Updater {
         value: &[u8],
         r: Option<&Box<OpRecord>>,
     ) {
+        println!("create key={:?}, value={:?}", key, value);
         let height = self.curr_version >> IN_BLOCK_IDX_BITS;
         let mut old_pos = -1;
         let mut prev_k80 = [0u8; 10];

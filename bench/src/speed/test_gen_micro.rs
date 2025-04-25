@@ -143,7 +143,7 @@ impl TestGenMicro {
         SimpleTask::new(v)
     }
 
-    pub fn fill_kv(&self, num: u64, k: &mut [u8], v: &mut [u8]) -> [u8; 32] {
+    pub fn fill_kv(&self, op_type: u8, num: u64, k: &mut [u8], v: &mut [u8]) -> [u8; 32] {
         // the key is 000...num, where num is a 32-bit number.
         BigEndian::write_u32(&mut k[self.key_size - 4..self.key_size], num as u32);
         // let hash = hasher::hash(&k[self.key_size-4..self.key_size]);
@@ -158,7 +158,12 @@ impl TestGenMicro {
         // }
         let kh = hasher::hash(&k[..]);
 
-        // the value is all 0
+        // the value is the num with all 0 prefix
+        v[..].fill(0);
+        if op_type != OP_READ {
+            // if the operation is read, the value is all zeros
+            BigEndian::write_u32(&mut v[self.val_size - 4..self.val_size], num as u32);
+        }
         // BigEndian::write_u32(&mut v[..4], self.cur_round as u32);
         // v[0..].copy_from_slice(&kh[4..]);
         kh
@@ -174,11 +179,12 @@ impl TestGenMicro {
             let num_ops = self.num_ops_in_cset();
             for _ in 0..num_ops {
                 let num = self.cur_num;
-                let kh = self.fill_kv(num, &mut k[..], &mut v[..]);
+                let kh = self.fill_kv(OP_CREATE, num, &mut k[..], &mut v[..]);
                 let shard_id = byte0_to_shard_id(kh[0]) as u8;
                 //let k64 = BigEndian::read_u64(&kh[0..8]);
                 // println!("AA blkcnt={:#04x} r={:#04x} op={} cur_num={:#08x} num={:#08x} k64={:#016x} k={:?} kh={:?}", self.block_count, self.cur_round, op_type, self.cur_num, num, k64, k, kh);
                 // println!("AA blkcnt={} r={} op={} cur_num={} num={}, shard_id={}", self.block_count, self.cur_round, op_type, self.cur_num, num, shard_id);
+                // println!("AA blkcnt={} k={:?}", self.block_count, &k[..]);
                 self.cur_num += 1;
 
                 cset.add_op(OP_CREATE, shard_id, &kh, &k[..], &v[..], None);
@@ -190,7 +196,7 @@ impl TestGenMicro {
                 for _ in 0..self.ops_in_cset {
                     let num = self.cur_read_num % self.entry_count;
                     let num = self.sp.change(num);
-                    let kh = self.fill_kv(num, &mut k[..], &mut v[..]);
+                    let kh = self.fill_kv(OP_READ, num, &mut k[..], &mut v[..]);
                     let shard_id = byte0_to_shard_id(kh[0]) as u8;
                     cset.add_op(OP_READ, shard_id, &kh, &k[..], &v[..], None);
                     self.cur_read_num += 1;
@@ -200,7 +206,7 @@ impl TestGenMicro {
                 for _ in 0..self.ops_in_cset {
                     let num = self.cur_update_num % self.entry_count;
                     let num = self.sp.change(num);
-                    let kh = self.fill_kv(num, &mut k[..], &mut v[..]);
+                    let kh = self.fill_kv(OP_WRITE, num, &mut k[..], &mut v[..]);
                     let shard_id = byte0_to_shard_id(kh[0]) as u8;
                     cset.add_op(OP_WRITE, shard_id, &kh, &k[..], &v[..], None);
                     self.cur_update_num += 1;

@@ -504,14 +504,28 @@ impl AdsCore {
                 });
             }
             if found_it || buf_too_small {
+                if buf_too_small {
+                    println!("key matches in cache or buf is too small");
+                }
                 return true; //stop loop if key matches or buf is too small
             }
             size = self.entry_files[shard_id].read_entry(file_pos, buf);
             if buf.len() < size {
+                println!(
+                    "buffer size {} is too small, value size: {}",
+                    buf.len(),
+                    size
+                );
                 return true; //stop loop if buf is too small
             }
             let entry_bz = EntryBz { bz: &buf[..size] };
             found_it = Self::check_entry(key_hash, key, &entry_bz);
+            println!("file pos:{}", file_pos);
+            if !found_it {
+                println!("fail check entry, key={:?}, key_hash={:?}", key, key_hash);
+                println!("entry key={:?}", entry_bz.key());
+                println!("entry key hash={:?}", entry_bz.key_hash());
+            }
             if found_it && cache.is_some() {
                 cache.unwrap().insert(shard_id, file_pos, &entry_bz);
             }

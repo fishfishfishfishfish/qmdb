@@ -85,8 +85,8 @@ pub fn read_kv(_: usize, key_list: &Vec<[u8; 52]>) {
 }
 
 #[cfg(all(not(feature = "use_mdbx"), not(feature = "use_rocksdb")))]
-pub fn read_kv(_: usize, _: &Vec<[u8; 52]>) {
-    // crate::speed::qmdb::read_kv(key_list);
+pub fn read_kv(tid: usize, height: i64, key_list: &Vec<Vec<u8>>) {
+    crate::speed::qmdb::read_kv(tid, height, key_list);
 }
 
 #[cfg(any(feature = "use_mdbx", feature = "use_rocksdb"))]
