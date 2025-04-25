@@ -31,6 +31,7 @@ use clap::Parser;
 use csv::{Error, WriterBuilder};
 use log::{info, warn};
 use parking_lot::RwLock;
+use serde::de::value;
 use walkdir::WalkDir;
 
 const PRIME1: u64 = 1299827; // Used for stride for hover_recreate_block
@@ -228,9 +229,9 @@ fn run(
         let (task_list, key_list, value_list) = test_gen.gen_block();
         let task_count = task_list.len();
         let key_count = key_list.len();
-        for key in key_list.iter() {
-            println!("key: {:?}", key);
-        }
+        // for key in key_list.iter() {
+        //     println!("key: {:?}", key);
+        // }
 
         let put_start = Instant::now();
         db_backend::update_kv(table_id, height, task_list);
@@ -239,9 +240,14 @@ fn run(
         let put_throughput = (key_count as f64 / put_latency as f64) * 1e9;
 
         let get_start = Instant::now();
-        db_backend::read_kv(table_id, height, &key_list);
+        let value_list_2 = db_backend::read_kv(table_id, height, &key_list);
         let get_latency = get_start.elapsed().as_nanos();
         let get_throughput = (key_count as f64 / get_latency as f64) * 1e9;
+        for v in 0..key_count {
+            // println!("v1: {:?}", value_list[v]);
+            // println!("v2: {:?}", value_list_2[v]);
+            assert_eq!(value_list[v], value_list_2[v])
+        }
 
         // logging
         tps_result.push(height.to_string());

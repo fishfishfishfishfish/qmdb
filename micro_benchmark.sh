@@ -1,11 +1,16 @@
 #!/bin/bash
 export PATH=$PATH:/home/${USER}/.cargo/bin
-cargo clean
+# cargo clean
 cargo build --release
 
-entries_counts=(80)
+# entries_counts=(80)
+# tps_blocks=20
+# ops_per_block=20 # batch size
+# key_size=32
+# value_size=1024
+entries_counts=(1000000)
 tps_blocks=20
-ops_per_block=20 # batch size
+ops_per_block=5000 # batch size
 key_size=32
 value_size=1024
 
