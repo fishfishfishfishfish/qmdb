@@ -12,7 +12,8 @@ pub const ENTRY_BASE_LENGTH: usize = ENTRY_FIXED_LENGTH;
 
 pub const NULL_ENTRY_VERSION: i64 = -2;
 pub const SHARD_COUNT: usize = 16;
-pub const DEFAULT_ENTRY_SIZE: usize = 300;
+// pub const DEFAULT_ENTRY_SIZE: usize = 300;
+pub const DEFAULT_ENTRY_SIZE: usize = 2048;
 
 pub const SENTRY_COUNT: usize = (1 << 16) / SHARD_COUNT;
 
