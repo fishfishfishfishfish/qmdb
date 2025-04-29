@@ -139,7 +139,7 @@ impl TestGenMicro {
         (SimpleTask::new(v), key_list, value_list)
     }
 
-    pub fn fill_kv(&self, op_type: u8, num: u64, k: &mut [u8], v: &mut [u8]) -> [u8; 32] {
+    pub fn fill_kv(&self, _op_type: u8, num: u64, k: &mut [u8], v: &mut [u8]) -> [u8; 32] {
         // the key is 000...num, where num is a 32-bit number.
         BigEndian::write_u32(&mut k[self.key_size - 4..self.key_size], num as u32);
         // let hash = hasher::hash(&k[self.key_size-4..self.key_size]);
@@ -154,12 +154,9 @@ impl TestGenMicro {
         // }
         let kh = hasher::hash(&k[..]);
 
-        // the value is the num with all 0 prefix
-        v[..].fill(0);
-        if op_type != OP_READ {
-            // if the operation is read, the value is all zeros
-            BigEndian::write_u32(&mut v[self.val_size - 4..self.val_size], num as u32);
-        }
+        // the value repeats a char
+        static CHARSET: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        v[..].fill(CHARSET.chars().nth(num as usize % CHARSET.len()).unwrap() as u8);
         // BigEndian::write_u32(&mut v[..4], self.cur_round as u32);
         // v[0..].copy_from_slice(&kh[4..]);
         kh
