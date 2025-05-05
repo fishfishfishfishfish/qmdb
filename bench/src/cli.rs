@@ -94,3 +94,42 @@ pub struct MicroBenchCli {
     #[arg(long, default_value_t = 1024)]
     pub val_size: u64,
 }
+
+#[derive(Parser, Serialize, Debug, Clone)]
+pub struct UpdateBenchCli {
+    /// Number of entries to populate database with
+    #[arg(short, long, default_value_t = 5000)]
+    pub entry_count: u64,
+
+    /// Directory to store the database's persistent files (e.g., /mnt/nvme/QMDB)
+    #[arg(long, default_value = "/tmp/QMDB")]
+    pub db_dir: String,
+
+    /// Source of randomness for workload generation  
+    #[arg(short, long, default_value = "./randsrc.dat")]
+    pub randsrc_filename: String,
+
+    /// Output file for benchmark results
+    #[arg(short, long, default_value = "results.csv")]
+    pub output_filename: String,
+
+    /// Number of changesets per task/transaction
+    #[arg(long, default_value_t = 1, alias = "changesets-per-txn")]
+    pub changesets_per_task: u64,
+
+    /// Number of blocks to run updates
+    #[arg(long, default_value_t = if cfg!(debug_assertions) { 10 } else { 50 })]
+    pub tps_blocks: u64,
+
+    /// List of versions for lineage tests
+    #[arg(long, value_parser, num_args = 1.., value_delimiter = ',')]
+    pub version_list: Vec<u64>,
+
+    /// size of the key
+    #[arg(long, default_value_t = 32)]
+    pub key_size: u64,
+
+    /// size of the value
+    #[arg(long, default_value_t = 1024)]
+    pub val_size: u64,
+}

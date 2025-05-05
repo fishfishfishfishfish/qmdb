@@ -157,6 +157,11 @@ impl TestGenMicro {
         // the value repeats a char
         static CHARSET: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         v[..].fill(CHARSET.chars().nth(num as usize % CHARSET.len()).unwrap() as u8);
+        BigEndian::write_u32(
+            &mut v[self.key_size - 4..self.key_size],
+            self.block_count as u32,
+        );
+        BigEndian::write_u32(&mut v[0..4], self.block_count as u32);
         // BigEndian::write_u32(&mut v[..4], self.cur_round as u32);
         // v[0..].copy_from_slice(&kh[4..]);
         kh
