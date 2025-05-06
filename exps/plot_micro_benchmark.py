@@ -49,15 +49,6 @@ if __name__ == "__main__":
         summary_dict["get_throughput"].append(np.mean(get_df['throughput'].to_numpy()))
         summary_dict["put_throughput"].append(np.mean(put_df['throughput'].to_numpy()))
         
-        # ranges = df[df['operation'].str.startswith('RANGE')]['operation'].unique()
-        # for r in ranges:
-        #     data = df[df['operation'] == r]
-        #     range_dict["entry_count"].append(acc)
-        #     range_dict["batch_size"].append(bz)
-        #     range_dict["value_size"].append(vl)
-        #     range_dict["range_size"].append(int(r.strip('RANGE')))
-        #     range_dict["throughput"].append(np.mean(data['throughput'].to_numpy()))
-        #     range_dict["latency"].append(np.mean(data['latency'].to_numpy()))
         
     summary_df =  pd.DataFrame(summary_dict)
     summary_df.to_csv(summary_file, index=False)

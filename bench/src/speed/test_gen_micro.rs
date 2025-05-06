@@ -158,7 +158,7 @@ impl TestGenMicro {
         static CHARSET: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         v[..].fill(CHARSET.chars().nth(num as usize % CHARSET.len()).unwrap() as u8);
         BigEndian::write_u32(
-            &mut v[self.key_size - 4..self.key_size],
+            &mut v[self.val_size - 4..self.val_size],
             self.block_count as u32,
         );
         BigEndian::write_u32(&mut v[0..4], self.block_count as u32);

@@ -34,6 +34,8 @@ name = "speed"
 [[bin]]
 name = "micro_benchmark"
 [[bin]]
+name = "range_benchmark"
+[[bin]]
 name = "update_benchmark"
 
 [features]
