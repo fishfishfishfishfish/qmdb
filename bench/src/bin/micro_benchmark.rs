@@ -1,6 +1,7 @@
 use std::iter;
 use std::panic;
 // use std::thread;
+use rand::Rng; // 引入 Rng trait，它定义了生成随机数的方法
 use std::collections::HashMap;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -257,23 +258,38 @@ fn run(
     println!("Benchmarking put completed successfully");
     let _ = wtr.flush();
     height -= 1;
+    let mut rng = rand::thread_rng();
+    let op_per_block = test_gen.num_op_in_blk();
     for b in 0..tps_blocks {
         // Each transaction is a task
         // task_count is the number of transactions
-        let (task_list, key_list, value_list) = test_gen.gen_block();
-        let task_count = task_list.len();
+        // let (task_list, key_list, val_list) = test_gen.gen_block();
+        // let task_count = task_list.len();
+
+        let mut key_list = Vec::with_capacity(op_per_block as usize);
+        let mut val_list = Vec::with_capacity(op_per_block as usize);
+        for _r in 0..op_per_block {
+            let mut k = vec![0u8; test_gen.key_size];
+            let mut v = vec![0u8; test_gen.val_size];
+            let mut num: u64 = rng.gen();
+            num = num % test_gen.entry_count;
+            print!("{} ", num);
+            test_gen.fill_kv(OP_READ, num, &mut k[..], &mut v[..]);
+            key_list.push(k);
+            val_list.push(v);
+        }
         let key_count = key_list.len();
 
         let get_start = Instant::now();
-        let value_list_2 = db_backend::read_kv(table_id, height, &key_list);
+        let val_list_2 = db_backend::read_kv(table_id, height, &key_list);
         let get_latency = get_start.elapsed().as_nanos() as f64 * 1e-9;
         let get_throughput = key_count as f64 / get_latency as f64;
         for v in 0..key_count {
             // println!("v1: {:?}", value_list[v]);
             // println!("v2: {:?}", value_list_2[v]);
             assert_eq!(
-                value_list[v][5..test_gen.val_size - 5],
-                value_list_2[v][5..test_gen.val_size - 5]
+                val_list[v][5..test_gen.val_size - 5],
+                val_list_2[v][5..test_gen.val_size - 5]
             )
         }
 
@@ -285,8 +301,8 @@ fn run(
         result.push(get_throughput.to_string());
         wtr.write_record(result)?;
         println!(
-            "TPS get block {}, task count: {}, latency: {}ns, throughput: {:.2?}",
-            b, task_count, get_latency, get_throughput,
+            "TPS get block {}, key count: {}, latency: {}ns, throughput: {:.2?}",
+            b, key_count, get_latency, get_throughput,
         );
     }
     println!("Benchmarking get completed successfully");

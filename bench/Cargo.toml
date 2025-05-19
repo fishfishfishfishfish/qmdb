@@ -19,6 +19,7 @@ serde_json = "1.0"
 log = "0.4"
 walkdir = "2.3.2"
 csv = "1.1"
+rand = "0.8.5"
 
 [dev-dependencies]
 criterion = "0.5"
@@ -33,6 +34,8 @@ procfs = { version = "0.17", features = ["serde1", "chrono"] }
 name = "speed"
 [[bin]]
 name = "micro_benchmark"
+[[bin]]
+name = "microseq_benchmark"
 [[bin]]
 name = "range_benchmark"
 [[bin]]

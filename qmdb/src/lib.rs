@@ -486,7 +486,7 @@ impl AdsCore {
         let shard_id = key_hash[0] as usize * 256 / SHARD_DIV;
         let mut size = 0;
         let mut found_it = false;
-        let idx = &self.indexer;
+        let idx: &Arc<indexer::inmem::InMemIndexerGeneric<indexer::inmem::Unit>> = &self.indexer;
         idx.for_each_value(height, key_hash, |file_pos| -> bool {
             let mut buf_too_small = false;
             if cache.is_some() {
@@ -503,6 +503,9 @@ impl AdsCore {
                 });
             }
             if found_it || buf_too_small {
+                if found_it {
+                    // println!("cache found it:{:?}", key);
+                }
                 return true; //stop loop if key matches or buf is too small
             }
             size = self.entry_files[shard_id].read_entry(file_pos, buf);
@@ -513,6 +516,7 @@ impl AdsCore {
             found_it = Self::check_entry(key_hash, key, &entry_bz);
             if found_it && cache.is_some() {
                 cache.unwrap().insert(shard_id, file_pos, &entry_bz);
+                // println!("file found it:{:?}", key);
             }
             found_it // stop loop if key matches
         });

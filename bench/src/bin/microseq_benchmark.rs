@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use bench::speed::results::Throughput;
 use bench::{
-    cli::RangeBenchCli,
+    cli::MicroBenchCli,
     speed::{db_backend, test_gen_micro::TestGenMicro},
 };
 
@@ -34,8 +34,6 @@ use parking_lot::RwLock;
 use serde::de::value;
 use walkdir::WalkDir;
 
-const PRIME1: u64 = 1299827; // Used for stride for hover_recreate_block
-
 const N_TABLES: usize = 1;
 
 fn main() {
@@ -44,7 +42,7 @@ fn main() {
         .build_global()
         .unwrap();
 
-    let args: RangeBenchCli = RangeBenchCli::parse();
+    let args: MicroBenchCli = MicroBenchCli::parse();
     // let mut results = BenchmarkResults::new(&args);
 
     // Print config
@@ -115,8 +113,10 @@ fn main() {
     let _ = run(
         0,
         &mut test_gen_,
-        args.range_list,
-        args.range_test_count,
+        // &mut randsrc,
+        // &mut results,
+        args.tps_blocks,
+        // args.db_dir.as_str(),
         args.output_filename.as_str(),
     );
 }
@@ -124,15 +124,17 @@ fn main() {
 fn run(
     table_id: usize,
     test_gen: &mut TestGenMicro,
-    range_list: Vec<u64>,
-    range_test_count: u64,
+    // randsrc: &mut RandSrc,
+    // results: &mut BenchmarkResults,
+    tps_blocks: u64,
+    // db_dir: &str,
     output_filename: &str,
 ) -> Result<(), csv::Error> {
     let output_file = File::create(output_filename)?;
     let mut wtr = csv::WriterBuilder::new().from_writer(output_file);
     let mut header: Vec<String> = Vec::new();
     header.push("height".to_string());
-    header.push("range".to_string());
+    header.push("operation".to_string());
     header.push("latency".to_string());
     header.push("throughput".to_string());
     wtr.write_record(&header)?;
@@ -164,17 +166,19 @@ fn run(
         );
 
         // Generate transactions to populate the database.
-        let (task_list, _, _) = test_gen.gen_block();
-        let task_count = task_list.len();
+        let (task_list, key_list, _value_list) = test_gen.gen_block();
+        let key_count = key_list.len();
+
         let populate_start = Instant::now();
         db_backend::create_kv(table_id, height, task_list);
+        db_backend::flush(table_id);
         let latency = populate_start.elapsed().as_nanos() as f64 * 1e-9;
-        let throughput = task_count as f64 / latency as f64;
+        let throughput = key_count as f64 / latency as f64;
 
         // logging
         let mut result: Vec<String> = Vec::new();
         result.push(height.to_string());
-        result.push("-1".to_string());
+        result.push("LOAD".to_string());
         result.push(latency.to_string());
         result.push(throughput.to_string());
         println!(
@@ -191,57 +195,92 @@ fn run(
     }
 
     db_backend::flush(table_id);
-    wtr.flush()?;
+    let _ = wtr.flush();
     println!(
         "Block population complete. Writing partial results to file: {}",
         output_filename
     );
 
+    println!(
+        "Benchmarking TPS: {} transactions, {} ops, {} blocks",
+        tps_blocks * test_gen.num_cset_in_blk(),
+        tps_blocks * test_gen.num_op_in_blk(),
+        tps_blocks
+    );
+
     height -= 1;
-    for b in 0..range_test_count {
-        for &range_size in &range_list {
-            let num = test_gen.sp.change(b);
-            // let num = 0;
-            let mut key_list = Vec::with_capacity(range_size as usize);
-            let mut val_list = Vec::with_capacity(range_size as usize);
-            for r in 0..range_size {
-                let mut k = vec![0u8; test_gen.key_size];
-                let mut v = vec![0u8; test_gen.val_size];
-                test_gen.fill_kv(OP_READ, num + r, &mut k[..], &mut v[..]);
-                key_list.push(k);
-                val_list.push(v);
-            }
-            let key_count = key_list.len();
-
-            let get_start = Instant::now();
-            let value_list_2 = db_backend::read_kv(table_id, height, &key_list);
-            let get_latency = get_start.elapsed().as_nanos() as f64 * 1e-9;
-            let get_throughput = key_count as f64 / get_latency as f64;
-            for v in 0..key_count {
-                // println!("k: {:?}", key_list[v]);
-                // println!("v1: {:?}", val_list[v]);
-                // println!("v2: {:?}", value_list_2[v]);
-                assert_eq!(
-                    val_list[v][5..test_gen.val_size - 5],
-                    value_list_2[v][5..test_gen.val_size - 5]
-                )
-            }
-
-            // logging
-            let mut result: Vec<String> = Vec::new();
-            result.push(height.to_string());
-            result.push(range_size.to_string());
-            result.push(get_latency.to_string());
-            result.push(get_throughput.to_string());
-            wtr.write_record(result)?;
-            println!(
-                "height {}, range size: {}, latency: {}ns, throughput: {:.2?}",
-                height, range_size, get_latency, get_throughput,
-            );
+    let op_per_block = test_gen.num_op_in_blk();
+    let mut num = 0;
+    for b in 0..tps_blocks {
+        let mut key_list = Vec::with_capacity(op_per_block as usize);
+        let mut val_list = Vec::with_capacity(op_per_block as usize);
+        for _r in 0..op_per_block {
+            let mut k = vec![0u8; test_gen.key_size];
+            let mut v = vec![0u8; test_gen.val_size];
+            test_gen.fill_kv(OP_READ, num, &mut k[..], &mut v[..]);
+            key_list.push(k);
+            val_list.push(v);
+            num += 1;
         }
+        let key_count = key_list.len();
+
+        let get_start = Instant::now();
+        let val_list_2 = db_backend::read_kv(table_id, height, &key_list);
+        let get_latency = get_start.elapsed().as_nanos() as f64 * 1e-9;
+        let get_throughput = key_count as f64 / get_latency as f64;
+        for v in 0..key_count {
+            // println!("v1: {:?}", value_list[v]);
+            // println!("v2: {:?}", value_list_2[v]);
+            assert_eq!(
+                val_list[v][5..test_gen.val_size - 5],
+                val_list_2[v][5..test_gen.val_size - 5]
+            )
+        }
+
+        // logging
+        let mut result: Vec<String> = Vec::new();
+        result.push(height.to_string());
+        result.push("GET".to_string());
+        result.push(get_latency.to_string());
+        result.push(get_throughput.to_string());
+        wtr.write_record(result)?;
+        println!(
+            "TPS get block {}, key count: {}, latency: {}ns, throughput: {:.2?}",
+            b, key_count, get_latency, get_throughput,
+        );
     }
-    println!("Benchmarking range completed successfully");
+    println!("Benchmarking get completed successfully");
     wtr.flush()?;
+
+    height += 1;
+    for b in 0..tps_blocks {
+        // Each transaction is a task
+        // task_count is the number of transactions
+        let (task_list, key_list, _value_list) = test_gen.gen_block();
+        let task_count = task_list.len();
+        let key_count = key_list.len();
+
+        let put_start = Instant::now();
+        db_backend::update_kv(table_id, height, task_list);
+        db_backend::flush(table_id);
+        let put_latency = put_start.elapsed().as_nanos() as f64 * 1e-9;
+        let put_throughput = key_count as f64 / put_latency as f64;
+
+        // logging
+        let mut result: Vec<String> = Vec::new();
+        result.push(height.to_string());
+        result.push("PUT".to_string());
+        result.push(put_latency.to_string());
+        result.push(put_throughput.to_string());
+        wtr.write_record(result)?;
+        println!(
+            "TPS put block {}, task count: {}, latency: {}ns, throughput: {:.2?}",
+            b, task_count, put_latency, put_throughput,
+        );
+        height += 1;
+    }
+    println!("Benchmarking put completed successfully");
+    let _ = wtr.flush();
 
     println!("Writing results to file: {}", output_filename);
     drop(wtr);

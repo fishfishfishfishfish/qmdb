@@ -1,7 +1,8 @@
 #!/bin/bash
 export PATH=$PATH:/home/${USER}/.cargo/bin
+export RAYON_NUM_THREADS=1
 cd ../
-# cargo clean
+cargo clean
 cargo build --release
 cd exps/
 
@@ -9,7 +10,8 @@ cd exps/
 load_account=(1000000 10000000)
 value_sizes=(1024)
 key_size=32
-ranges="5,50,100,200,300,400,500,1000,2000"
+ranges="5,50,100,200,300,400,500,1000,2000,5000,10000"
+# ranges="5"
 num_range_test=20
 load_batch_size=10000
 
@@ -18,6 +20,13 @@ result_dir="${PWD}/results_qmdb/range_benchmark"
 mkdir -p $data_path
 mkdir -p ${result_dir}
 # rm -rf ${result_dir}/*
+
+PID=$$
+echo "PID: $PID"
+taskset -p ${PID}
+taskset -pc 1 ${PID}
+taskset -p ${PID}
+
 
 # 运行测试
 for n_acc in "${load_account[@]}"; do
@@ -35,3 +44,5 @@ for n_acc in "${load_account[@]}"; do
         set +x
     done
 done
+
+python3 plot_range_benchmark.py qmdb range_benchmark
