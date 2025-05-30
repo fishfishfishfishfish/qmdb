@@ -27,3 +27,5 @@ $TIME_CMD cargo run --bin speed --release -- \
     --hover-interval 1000 \
     --output-filename qmdb_benchmark.json \
     --tps-blocks 500 2>&1
+
+

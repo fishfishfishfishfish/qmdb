@@ -49,7 +49,7 @@ impl Compactor {
                 //println!("sleeping compactor {}", self.shard_id);
                 thread::sleep(time::Duration::from_millis(500));
             }
-            let size = self
+            let size: usize = self
                 .entry_file
                 .read_entry_with_pre_reader(file_pos, i64::MAX, &mut bz, &mut pre_reader)
                 .unwrap();

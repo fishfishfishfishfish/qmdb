@@ -78,23 +78,23 @@ pub fn read_kv(tid: usize, height: i64, key_list: &Vec<Vec<u8>>) -> Vec<Vec<u8>>
 
     // Clone the Arc before moving it into the closure
     let cloned_values_list = Arc::clone(&values_list);
-    rayon::scope(|s| {
-        s.spawn(move |_| {
-            let mut buf = [0; DEFAULT_ENTRY_SIZE];
-            for k in key_list.iter() {
-                let kh = hasher::hash(&k[..]);
-                // println!("AA read k={:?}, kh={:?} ", k, kh);
-                let (size, ok) = shared_ads.read_entry(height, &kh[..], &k[..], &mut buf);
-                if !ok {
-                    panic!("Cannot read entry k={:?}, kh={:?} ", k, kh);
-                }
-                let entry_bz = EntryBz { bz: &buf[..size] };
-                let value = entry_bz.value().to_vec();
-                // println!("AA read k={:?}, kh={:?} value={:?} ", k, kh, value);
-                cloned_values_list.lock().unwrap().push(value);
-            }
-        });
-    });
+    // rayon::scope(|s| {
+    //     s.spawn(move |_| {
+    let mut buf = [0; DEFAULT_ENTRY_SIZE];
+    for k in key_list.iter() {
+        let kh = hasher::hash(&k[..]);
+        // println!("AA read k={:?}, kh={:?} ", k, kh);
+        let (size, ok) = shared_ads.read_entry(height, &kh[..], &k[..], &mut buf);
+        if !ok {
+            panic!("Cannot read entry k={:?}, kh={:?} ", k, kh);
+        }
+        let entry_bz = EntryBz { bz: &buf[..size] };
+        let value = entry_bz.value().to_vec();
+        // println!("AA read k={:?}, kh={:?} value={:?} ", k, kh, value);
+        cloned_values_list.lock().unwrap().push(value);
+    }
+    //     });
+    // });
     unsafe {
         ADS[tid] = Some(ads);
     }

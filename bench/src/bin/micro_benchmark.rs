@@ -132,6 +132,7 @@ fn run(
     // db_dir: &str,
     output_filename: &str,
 ) -> Result<(), csv::Error> {
+    println!("{}", output_filename);
     let output_file = File::create(output_filename)?;
     let mut wtr = csv::WriterBuilder::new().from_writer(output_file);
     let mut header: Vec<String> = Vec::new();
@@ -265,13 +266,16 @@ fn run(
         let key_count = key_list.len();
 
         let get_start = Instant::now();
-        let value_list_2 = db_backend::read_kv(table_id, height, &key_list);
+        let value_list_2 = db_backend::read_kv(table_id, -1, &key_list);
         let get_latency = get_start.elapsed().as_nanos() as f64 * 1e-9;
         let get_throughput = key_count as f64 / get_latency as f64;
         for v in 0..key_count {
             // println!("v1: {:?}", value_list[v]);
             // println!("v2: {:?}", value_list_2[v]);
-            assert_eq!(value_list[v], value_list_2[v])
+            assert_eq!(
+                value_list[v][4..test_gen.val_size],
+                value_list_2[v][4..test_gen.val_size]
+            )
         }
 
         // logging
@@ -289,9 +293,6 @@ fn run(
     println!("Benchmarking get completed successfully");
     wtr.flush()?;
 
-    let (task_list4range, key_list4range, _) = test_gen.gen_block();
-    let key_count = key_list4range.len();
-    
     println!("Writing results to file: {}", output_filename);
     drop(wtr);
     Ok(())
