@@ -208,6 +208,7 @@ fn run(
 
         // Generate transactions to populate the database.
         let task_list = test_gen.gen_block();
+        let _ = task_list[248].read().as_ref().unwrap();
         // let task_count = task_list.len() as i64;
         // if height % 10 == 5 {
         //     // Progress update every increase in height of 5

@@ -40,3 +40,6 @@ qmdb_results.txt
 qmdb_results.json
 
 .envrc
+
+data/
+*.log
