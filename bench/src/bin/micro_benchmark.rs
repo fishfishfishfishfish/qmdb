@@ -266,7 +266,7 @@ fn run(
         let key_count = key_list.len();
 
         let get_start = Instant::now();
-        let value_list_2 = db_backend::read_kv(table_id, -1, &key_list);
+        let value_list_2 = db_backend::read_kv(table_id, height, &key_list);
         let get_latency = get_start.elapsed().as_nanos() as f64 * 1e-9;
         let get_throughput = key_count as f64 / get_latency as f64;
         for v in 0..key_count {
