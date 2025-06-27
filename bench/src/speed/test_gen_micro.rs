@@ -142,6 +142,10 @@ impl TestGenMicro {
     pub fn fill_kv(&self, _op_type: u8, num: u64, k: &mut [u8], v: &mut [u8]) -> [u8; 32] {
         // the key is 000...num, where num is a 32-bit number.
         BigEndian::write_u32(&mut k[self.key_size - 4..self.key_size], num as u32);
+        // 将num转换为字符串，并指定长度和补零
+        // let num_str = format!("{:0>width$}", num, width = self.key_size);
+        // // 将字符串写入k中
+        // k[..self.key_size].copy_from_slice(num_str.as_bytes());
         // let hash = hasher::hash(&k[self.key_size-4..self.key_size]);
         // if self.key_size-4 < 32 {
         //     k[0..self.key_size-4].copy_from_slice(&hash[0..self.key_size-4]);
