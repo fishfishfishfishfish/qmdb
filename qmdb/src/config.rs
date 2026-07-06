@@ -3,7 +3,8 @@ pub const UTILIZATION_RATIO: i64 = 7;
 pub const UTILIZATION_DIV: i64 = 10;
 
 const TASK_CHAN_SIZE: usize = 200000;
-const PREFETCHER_THREAD_COUNT: usize = 512;
+// const PREFETCHER_THREAD_COUNT: usize = 512;
+const PREFETCHER_THREAD_COUNT: usize = 1;
 const URING_SIZE: u32 = 1024;
 const URING_COUNT: usize = 32;
 const SUB_ID_CHAN_SIZE: usize = 20000;

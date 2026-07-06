@@ -51,8 +51,10 @@ use std::{
     sync::Arc,
 };
 
-const PRE_READ_BUF_SIZE: usize = 512 * 1024;
-pub const IO_BLK_SIZE: usize = 512;
+// const PRE_READ_BUF_SIZE: usize = 512 * 1024;
+// pub const IO_BLK_SIZE: usize = 512;
+const PRE_READ_BUF_SIZE: usize = 4096 * 1024;
+pub const IO_BLK_SIZE: usize = 4096;
 
 #[cfg(target_os = "linux")]
 const DIRECT: i32 = libc::O_DIRECT;
