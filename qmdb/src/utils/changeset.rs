@@ -14,10 +14,19 @@ pub struct ChangeSet {
 pub struct ChangeOp {
     pub op_type: u8,
     shard_id: u8,
+    // `old_value` is a field in ChangeSet used for tracking and verifying old values.
+    //      If MVCC or transaction rollback is introduced (not yet implemented),
+    //      this field can be used directly.
     old_value_len: u16,
     key_start: u32,
     value_start: u32,
     key_hash_start: u32,
+    // `rec` is a field in ChangeSet used for tracking and verifying old values.
+    // Scenario 1: Fuzzing test (consistency verification): qmdb/examples/v1_fuzz/main.rs, 
+    //     pack the complete state of the reference database (refdb) into ChangeOp, 
+    //     allowing the updater to continuously assert consistency with refdb during execution.
+    // Scenario 2: MVCC/transaction correctness checking
+    // Scenario 3: State tracking in debug mode
     rec: Option<Box<OpRecord>>,
 }
 

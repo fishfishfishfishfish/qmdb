@@ -21,10 +21,9 @@ Cargo.lock
 #.idea/
 *.swp
 
-*.log
 
 data/
-*results/
+
 
 /qmdb/DataTree
 /TestGenV1

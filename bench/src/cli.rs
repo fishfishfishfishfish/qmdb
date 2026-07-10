@@ -175,3 +175,42 @@ pub struct RangeBenchCli {
     #[arg(long, default_value_t = 1024)]
     pub val_size: u64,
 }
+
+#[derive(Parser, Serialize, Debug, Clone)]
+pub struct ScaleBenchCli {
+    /// Directory to store the database's persistent files
+    #[arg(long, default_value = "testdata/paper")]
+    pub db_dir: String,
+
+    /// Source of randomness for workload generation
+    #[arg(short, long, default_value = "./randsrc.dat")]
+    pub randsrc_filename: String,
+
+    /// Number of records for write throughput test
+    #[arg(long, default_value_t = 1000)]
+    pub write_batch: u64,
+
+    /// Number of records for read throughput test
+    #[arg(long, default_value_t = 1000)]
+    pub read_batch: u64,
+
+    /// Length of the key in bytes
+    #[arg(long, default_value_t = 32)]
+    pub key_length: u64,
+
+    /// Length of the value in bytes
+    #[arg(long, default_value_t = 1024)]
+    pub value_length: u64,
+
+    /// Directory to store the results
+    #[arg(long, default_value = "exps/results_ledgerdb")]
+    pub result_dir: String,
+
+    /// Output filename for benchmark results
+    #[arg(long, default_value = "scaleBenchmark.csv")]
+    pub result_file: String,
+
+    /// Zipf distribution parameter (closer to 1 = more skewed)
+    #[arg(long, default_value_t = 0.99)]
+    pub zipf: f64,
+}

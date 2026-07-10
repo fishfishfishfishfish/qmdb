@@ -8,4 +8,5 @@ pub mod rocksdb;
 pub mod shuffle_param;
 pub mod test_gen;
 pub mod test_gen_micro;
+pub mod test_gen_scale;
 pub mod test_helper;

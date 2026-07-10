@@ -73,6 +73,44 @@ impl Updater {
         }
     }
 
+    fn read_kv(
+        &mut self,
+        key_hash: &[u8; 32],
+        key: &[u8],
+        r: Option<&Box<OpRecord>>,
+    ) -> Option<Vec<u8>> {
+        let height = self.curr_version >> IN_BLOCK_IDX_BITS;
+        let indexer = self.indexer.clone();
+        let mut result: Option<Vec<u8>> = None;
+        indexer.for_each_value(height, &key_hash[..], |file_pos| -> bool {
+            self.read_entry(self.shard_id, file_pos);
+            let entry_bz = EntryBz {
+                bz: &self.read_entry_buf[..],
+            };
+            if entry_bz.key() == key {
+                let value = entry_bz.value().to_vec();
+                // Optional consistency check against the recorded old value
+                // when in `check_rec` mode.
+                if cfg!(feature = "check_rec") {
+                    if let Some(rec) = r {
+                        if let Some(expected) = rec.rd_list.last() {
+                            assert_eq!(
+                                &expected[..],
+                                entry_bz.bz,
+                                "read_kv: entry content does not match OpRecord"
+                            );
+                        }
+                    }
+                }
+                result = Some(value);
+                true // stop iterating once we found the key
+            } else {
+                false
+            }
+        });
+        result
+    }
+
     fn read_entry(&mut self, shard_id: usize, file_pos: i64) {
         let cache_hit = self.cache.lookup(shard_id, file_pos, |entry_bz| {
             self.read_entry_buf.resize(0, 0);
@@ -140,7 +178,13 @@ impl Updater {
                     OP_WRITE => self.write_kv(key_hash, k, v, r),
                     OP_CREATE => self.create_kv(key_hash, k, v, r),
                     OP_DELETE => self.delete_kv(key_hash, k, r),
-                    OP_READ => (), //used for debug
+                    OP_READ => {
+                        // Issue the read so that the entry is actually
+                        // fetched through the indexer. The returned value
+                        // is intentionally discarded; reads are exercised
+                        // here primarily for debugging / fuzzing.
+                        let _ = self.read_kv(key_hash, k, r);
+                    }
                     _ => {
                         panic!("Updater: unsupported operation");
                     }
